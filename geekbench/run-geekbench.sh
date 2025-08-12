@@ -23,84 +23,64 @@
 
 set -euo pipefail
 
+CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_NAME="$(basename "$0")"
-# TODO: Double check / change for other versions or if link doesnt work.
+# EDIT: Change this URL to update Geekbench version or architecture as needed
 readonly GEEKBENCH_URL="https://cdn.geekbench.com/Geekbench-6.4.0-LinuxRISCVPreview.tar.gz"
 readonly GEEKBENCH_ARCHIVE="geekbench-riscv.tar.gz"
 readonly GEEKBENCH_DIR="geekbench-riscv"
-readonly PROJECTS_DIR="$HOME/projects"
-readonly LOG_FILE="logs.txt"
-
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
-}
-
-error() {
-    log "ERROR: $*"
-    exit 1
-}
-
-check_dependencies() {
-    local deps=("curl" "tar" "find")
-    for dep in "${deps[@]}"; do
-        command -v "$dep" >/dev/null 2>&1 || error "$dep is not installed"
-    done
-}
 
 setup_workspace() {
-    log "Setting up workspace in $PROJECTS_DIR"
-    mkdir -p "$PROJECTS_DIR"
-    cd "$PROJECTS_DIR"
+    cd $CURR_DIR
 }
 
 download_geekbench() {
-    log "Downloading GeekBench 6 RISC-V from $GEEKBENCH_URL"
+    log INFO "Downloading GeekBench 6 RISC-V from $GEEKBENCH_URL"
     if [[ -f "$GEEKBENCH_ARCHIVE" ]]; then
-        log "Archive already exists, skipping download"
+        log INFO "Archive already exists, skipping download"
         return 0
     fi
     
-    curl -L -o "$GEEKBENCH_ARCHIVE" "$GEEKBENCH_URL" || error "Failed to download GeekBench archive"
-    log "Download completed successfully"
+    curl -L -o "$GEEKBENCH_ARCHIVE" "$GEEKBENCH_URL" || die "Failed to download GeekBench archive"
+    log SUCCESS "Download completed successfully"
 }
 
 extract_archive() {
-    log "Extracting $GEEKBENCH_ARCHIVE"
+    log INFO "Extracting $GEEKBENCH_ARCHIVE"
     mkdir -p "$GEEKBENCH_DIR"
-    tar -xf "$GEEKBENCH_ARCHIVE" -C "$GEEKBENCH_DIR" || error "Failed to extract archive"
-    log "Extraction completed"
+    tar -xf "$GEEKBENCH_ARCHIVE" -C "$GEEKBENCH_DIR" || die "Failed to extract archive"
+    log SUCCESS "Extraction completed"
 }
 
 run_benchmark() {
-    log "Starting GeekBench 6 CPU benchmark"
+    log INFO "Starting GeekBench 6 CPU benchmark"
     cd "$GEEKBENCH_DIR"
     
     local geekbench_binary
     geekbench_binary=$(find . -name "geekbench6" -type f -executable 2>/dev/null | head -1)
     
     if [[ -z "$geekbench_binary" ]]; then
-        error "GeekBench 6 binary not found in extracted archive"
+        die "GeekBench 6 binary not found in extracted archive"
     fi
     
-    log "Found GeekBench binary: $geekbench_binary"
-    log "Running CPU benchmark (output will be saved to $LOG_FILE)"
+    log INFO "Found GeekBench binary: $geekbench_binary"
+    log INFO "Running CPU benchmark (output will be saved to $LOG_FILE)"
     
-    "$geekbench_binary" --cpu 2>&1 | tee "$LOG_FILE" || error "Benchmark execution failed"
+    "$geekbench_binary" --cpu 2>&1 | tee "$LOG_FILE" || die "Benchmark execution failed"
     
-    log "Benchmark completed successfully"
-    log "Results saved to: $PWD/$LOG_FILE"
+    log SUCCESS "Benchmark completed successfully"
+    log INFO "Results saved to: $LOG_FILE"
 }
 
 main() {
-    log "Starting $SCRIPT_NAME"
+    log INFO "Starting $SCRIPT_NAME"
     
-    check_dependencies
     setup_workspace
     download_geekbench
     extract_archive
     run_benchmark
     
-    log "GeekBench 6 RISC-V benchmark completed successfully"
+    log SUCCESS "GeekBench 6 RISC-V benchmark completed successfully"
 }
 
 main "$@"

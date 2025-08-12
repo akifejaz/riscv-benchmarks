@@ -17,17 +17,6 @@
 
 set -euo pipefail
 
-LOG_FILE="unixbench_$(date +%Y%m%d).log"
-
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" >&2
-}
-
-error() {
-    log "ERROR: $*"
-    exit 1
-}
-
 install_dependencies() {
     log "Installing dependencies..."
     sudo apt-get update

@@ -29,32 +29,12 @@ set -euo pipefail
 # Helper Functions
 #==============================================================================
 CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="$CURR_DIR/spec_$(date +%Y%m%d).log"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [$1] ${*:2}" | tee -a "$LOG_FILE"
-    case $1 in
-        ERROR)   echo -e "${RED}[ERROR]${NC} ${*:2}" >&2 ;;
-        SUCCESS) echo -e "${GREEN}[SUCCESS]${NC} ${*:2}" ;;
-        WARNING) echo -e "${YELLOW}[WARNING]${NC} ${*:2}" ;;
-        *)       echo -e "${BLUE}[INFO]${NC} ${*:2}" ;;
-    esac
-}
-
-die() { log ERROR "$@"; exit 1; }
-
-check_sudo() {
-    log INFO "Checking sudo privileges..."
-    [[ $EUID -eq 0 ]]         || die "Must run with sudo: sudo $0"
-    export USER="${SUDO_USER:-$(whoami)}"
-}
-
-# Change these if needed
-ISO_FILE="cpu2017-1.1.9.iso"
+# EDIT : Update the path of ISO File
+ISO_FILE="$CURR_DIR/cpu2017-1.1.9.iso"
 MOUNT_DIR="$CURR_DIR/mnt-spec"
 INSTALL_DIR="$CURR_DIR/spec-17"
-
 
 setup_spec() {
     log INFO "Installing SPEC ..."
@@ -101,9 +81,10 @@ tweak_config() {
     log INFO "Tweaking SPEC configuration..."
     
     # Download the example config
+    # EDIT: Update this URL if the config file location changes
     curl -L -o $INSTALL_DIR/gcc-linux-riscv.cfg https://www.spec.org/cpu2017/Docs/Example-gcc-linux-riscv.cfg 
     
-    # label of type <hostname>-<memory>-<ram>-<user>-test
+    # EDIT : change lable (curruntly set to hostname-memory-ram-user-test)
     HOSTNAME=$(hostname -s)
     MEM=$(free -g | awk '/Mem:/ {print $2}') 
     RAM=$(df -h / | awk 'NR==2 {print $4}')  
@@ -112,6 +93,7 @@ tweak_config() {
     # Replace 'mytest' with dynamic label
     sed -i "s|%   define label \"mytest\"|%   define label \"$HOSTNAME-$MEM\GB-$RAM-$USER-test\"|" $INSTALL_DIR/gcc-linux-riscv.cfg
     
+    # EDIT : Setup the email configuration on your system or comment out this
     echo "default:
    mailto = akif.ejaz@10xengineers.ai, akifejaz40@gmail.com" >> $INSTALL_DIR/gcc-linux-riscv.cfg
 
@@ -122,8 +104,10 @@ run_spec() {
     log INFO "Running SPEC benchmark..."
     
     cd "$INSTALL_DIR"
+    # EDIT : Change the cores and which benchmarks you want to run
+    # NOTE : fprate, intspeed, fpspeed might not work on RISC-V :(
     cores=$(nproc)
-    benchmarks="intrate "
+    benchmarks="intrate fprate fpspeed intspeed"
     
     # Run benchmark with multiple copies (multi-core rate mode)
     ./bin/runcpu \
@@ -154,7 +138,6 @@ main() {
     setup_spec
     tweak_config
     run_spec
-    
     
     log SUCCESS "SPEC benchmark completed successfully. Check $LOG_FILE for details."
 }

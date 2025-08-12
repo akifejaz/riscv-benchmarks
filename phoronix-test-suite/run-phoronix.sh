@@ -27,33 +27,8 @@
 set -euo pipefail
 
 # Variables
-LOG_FILE="./phoronix_$(date +%Y%m%d).log"
+# Use the main LOG_FILE from the parent script, do not set it here
 PHORONIX_URL="https://github.com/phoronix-test-suite/phoronix-test-suite/releases/download/v10.8.4/phoronix-test-suite-10.8.4.tar.gz"
-
-#==============================================================================
-# Helper Functions
-#==============================================================================
-
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
-
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [$1] ${*:2}" | tee -a "$LOG_FILE"
-    case $1 in
-        ERROR)   echo -e "${RED}[ERROR]${NC} ${*:2}" >&2 ;;
-        SUCCESS) echo -e "${GREEN}[SUCCESS]${NC} ${*:2}" ;;
-        WARNING) echo -e "${YELLOW}[WARNING]${NC} ${*:2}" ;;
-        *)       echo -e "${BLUE}[INFO]${NC} ${*:2}" ;;
-    esac
-}
-
-die() { log ERROR "$@"; exit 1; }
-
-check_sudo() {
-    log INFO "Checking sudo privileges..."
-    [[ $EUID -eq 0 ]]         || die "Must run with sudo: sudo $0"
-    export USER="${SUDO_USER:-$(whoami)}"
-}
-
 
 #==============================================================================
 # Phoronix Test Suite Functions
@@ -94,11 +69,17 @@ setup_phoronix () {
 
 run_phoronix() {
     log INFO "Starting Phoronix Test Suite..."
+    
+    # EDIT : Add OpenBenchmarking credentials
+    # SignUp Here : https://openbenchmarking.org/register
+    export OB_USER=""
+    export OB_PASS=""
 
     # Ensure OpenBenchmarking credentials are set
     if [[ -z "${OB_USER:-}" || -z "${OB_PASS:-}" ]]; then
         die "Please set your OpenBenchmarking credentials as environment variables OB_USER and OB_PASS."
     fi
+
 
     # Login to OpenBenchmarking.org
     {
@@ -106,14 +87,14 @@ run_phoronix() {
         echo "$OB_PASS"
     } | phoronix-test-suite openbenchmarking-setup
 
-    # Optional: configure batch setup preferences
+    # EDIT : configure batch setup preferences
     printf 'y\nn\nn\nn\nn\nn\nn\n' | phoronix-test-suite batch-setup
 
     # Configure environment for non-interactive run
     export PTS_NON_INTERACTIVE=1
     export PTS_SAVE_RESULTS=1
 
-    # Define identifier: <user>_<hostname>_<YYYYMMDD_HHMM>
+    # EDIT : Setup the test results identifier (curruntly set to <user>_<hostname>_<YYYYMMDD_HHMM>)
     HOSTNAME=$(hostname -s)
     USER=$(whoami)
     DATE_TAG=$(date +%Y%m%d_%H%M)
@@ -122,16 +103,15 @@ run_phoronix() {
     # or /var/lib/phoronix-test-suite/test-results/ (when run as root)
     export TEST_RESULTS_NAME="RISCV CPU Benchmark ${DATE_TAG}" 
 
-    # List of benchmarks to run
+    # EDIT : Choose which benchmarks to run 
     TEST_LIST="coremark cachebench npb compress-7zip scimark2 openssl byte fftw"
 
     log INFO "Running benchmarks: $TEST_LIST"
+    # EDIT : This is importent, choose correct options for your benchmarks you selected above
+    # Not sure which options to use? Run manually to see the options like "phoronix-test-suite benchmark scimark2"
     echo -e "4\n11\n7\n2\n5\n3\n7" | phoronix-test-suite batch-benchmark $TEST_LIST
 
     log SUCCESS "Phoronix Test Suite run completed."
-
-    # phoronix-test-suite result-file-to-text "$TEST_RESULTS_IDENTIFIER" > "phoronix_summary_${DATE_TAG}.txt"
-    # log INFO "Results saved to: phoronix_summary_${DATE_TAG}.txt"
 }
 
 push_results () {
@@ -157,7 +137,7 @@ push_results () {
 
 main() {
     log INFO "Starting Phoronix automation - Log: $LOG_FILE"
-    
+
     check_sudo
     setup_phoronix
     run_phoronix

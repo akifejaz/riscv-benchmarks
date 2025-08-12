@@ -29,10 +29,12 @@
 
 set -euo pipefail
 
+CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUTDIR="$CURR_DIR/results"
+
 # Here calling N as ITERATIONS and n as RUNS_PER_ITER 
 ITERATIONS=(200000 400000 1000000 2000000 4000000 8000000)
 RUNS_PER_ITER=5
-OUTDIR="coremark_results"
 
 # ===================== UTILITIES =====================
 get_ips()      { grep "Iterations/Sec" "$1" | awk -F':' '{print $2}' | xargs; }
@@ -42,31 +44,39 @@ get_correct()  { grep -q "Correct operation validated" "$1" && echo 1 || echo 0;
 
 
 build_coremark() {
+    cd "$CURR_DIR"
     echo "== Cloning CoreMark repository =="
     git clone https://github.com/eembc/coremark.git 2>/dev/null || \
         echo "Repo already exists, skipping clone."
+    cd "$CURR_DIR/coremark" && \
+    mkdir -p coremark-st coremark-mt
 
     echo "== Building Single-Core CoreMark =="
-    mkdir -p coremark/coremark-st
-    make -C coremark \
+    make \
         OPATH=coremark-st/ \
         ITERATIONS=8000 \
         CC=gcc \
         PORT_DIR=linux/ \
-        XCFLAGS="-DPERFORMANCE_RUN=1"
+        XCFLAGS="-DPERFORMANCE_RUN=1" &> /dev/null || \
+        echo "CoreMark Single Core Build failed"
 
-    echo "== Building Multi-Core CoreMark (8 threads) =="
-    mkdir -p coremark/coremark-mt
-    make -C coremark \
+    # EDIT : Change the number of threads you want to use for multi-core
+    echo "== Building Multi-Core CoreMark ($(nproc) threads) =="
+    make \
         OPATH=coremark-mt/ \
         ITERATIONS=800 \
         CC=gcc \
         PORT_DIR=linux/ \
-        XCFLAGS="-DMULTITHREAD=8 -DUSE_PTHREAD -pthread -DPERFORMANCE_RUN=1"
+        XCFLAGS="-DMULTITHREAD=$nproc -DUSE_PTHREAD -pthread -DPERFORMANCE_RUN=1" \
+        &> /dev/null || \
+        echo "CoreMark Multi Core Build failed"
+    
+    cd $CURR_DIR
 }
 
 
 run_benchmarks() {
+    mkdir -p "$OUTDIR"
     BIN_DIR="coremark-$1"
     for iter in "${ITERATIONS[@]}"; do
         echo "== Running $1 tests for iteration: $iter =="
