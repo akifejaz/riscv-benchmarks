@@ -1,3 +1,10 @@
+<!--
+  This README provides setup and usage instructions for the RISCV Benchmarks suite.
+    - "EDIT" tags in scripts indicate user-editable variables (paths, versions, etc).
+    - Each benchmark may require additional dependencies not checked by the main script; review
+      individual benchmark scripts for details.
+    - Logs for all runs are saved in the central logs/ directory.
+-->
 # RISCV Benchmarks
 
 Welcome! This repository contains several open-source benchmarks for performance evaluation of RISC-V based machines. The main goal is to provide simple setup scripts that can be directly run on RISC-V without worrying about compilation or dependency issues.
@@ -45,13 +52,31 @@ Welcome! This repository contains several open-source benchmarks for performance
 
 ---
 
-## 📦 Benchmarks Included
+## Benchmarks Included
 
 - **Phoronix Test Suite**
 - **SPEC 2017**
 - **Geekbench 6**
 - **UnixBench**
 - **CoreMark**
+
+<!-- upcomming benchmarks are sysbench, HPL, ONNXruntime, MLPerf Tiny, MLPerf Inference  -->
+## Upcoming Benchmarks
+
+- **Sysbench**
+- **HPL**
+- **ONNX Runtime**
+- **MLPerf Tiny**
+- **MLPerf Inference**
+
+Want to suggest another benchmark or contribute to any of the above? [Create an issue](https://github.com/akifejaz/riscv-benchmarks/issues/new) or [submit a pull request](https://github.com/akifejaz/riscv-benchmarks/pulls)!
+
+
+## TODO
+
+- Check for dependencies for each benchmark 
+- Add cleanup functions to clean the working directory after runs
+- Add config file to control the options to enable/disable for each benchmark
 
 ---
 
